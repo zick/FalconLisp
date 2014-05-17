@@ -258,9 +258,69 @@ function subrCdr(args): return safeCdr(safeCar(args))
 
 function subrCons(args): return makeCons(safeCar(args), safeCar(safeCdr(args)))
 
+function subrEq(args)
+  x = safeCar(args)
+  y = safeCar(safeCdr(args))
+  if x.tag() == 'num' and y.tag() == 'num'
+    if x['data'] == y['data']
+      return makeSym('t')
+    end
+    return kNil
+  elif x == y
+    return makeSym('t')
+  end
+  return kNil
+end
+
+function subrAtom(args)
+  if safeCar(args).tag() == 'cons': return kNil
+  return makeSym('t')
+end
+
+function subrNumberp(args)
+  if safeCar(args).tag() == 'num': return makeSym('t')
+  return kNil
+end
+
+function subrSymbolp(args)
+  if safeCar(args).tag() == 'sym': return makeSym('t')
+  return kNil
+end
+
+function subrAddOrMul(fn, init_val): return function (args)
+  ret = init_val
+  while args.tag() == 'cons'
+    if args['car'].tag() != 'num': return makeError('wrong type')
+    ret = fn(ret, args['car']['data'])
+    args = args['cdr']
+  end
+  return makeNum(ret)
+end
+subrAdd = subrAddOrMul({x, y => x + y}, 0)
+subrMul = subrAddOrMul({x, y => x * y}, 1)
+
+function subrSubOrDivOrMod(fn): return function(args)
+  x = safeCar(args)
+  y = safeCar(safeCdr(args))
+  if x.tag() != 'num' or y.tag() != 'num': return makeError('wrong type')
+  return makeNum(fn(x['data'], y['data']))
+end
+subrSub = subrSubOrDivOrMod({x, y => x - y})
+subrDiv = subrSubOrDivOrMod({x, y => x / y})
+subrMod = subrSubOrDivOrMod({x, y => x % y})
+
 addToEnv(makeSym('car'), makeSubr(subrCar), g_env)
 addToEnv(makeSym('cdr'), makeSubr(subrCdr), g_env)
 addToEnv(makeSym('cons'), makeSubr(subrCons), g_env)
+addToEnv(makeSym('eq'), makeSubr(subrEq), g_env)
+addToEnv(makeSym('atom'), makeSubr(subrAtom), g_env)
+addToEnv(makeSym('numberp'), makeSubr(subrNumberp), g_env)
+addToEnv(makeSym('symbolp'), makeSubr(subrSymbolp), g_env)
+addToEnv(makeSym('+'), makeSubr(subrAdd), g_env)
+addToEnv(makeSym('*'), makeSubr(subrMul), g_env)
+addToEnv(makeSym('-'), makeSubr(subrSub), g_env)
+addToEnv(makeSym('/'), makeSubr(subrDiv), g_env)
+addToEnv(makeSym('mod'), makeSubr(subrMod), g_env)
 addToEnv(makeSym('t'), makeSym('t'), g_env)
 
 print('> ')
