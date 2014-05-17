@@ -200,6 +200,11 @@ function eval(obj, env)
     return eval(safeCar(safeCdr(args)), env)
   elif op == makeSym('lambda')
     return makeExpr(args, env)
+  elif op == makeSym('defun')
+    expr = makeExpr(safeCdr(args), env)
+    sym = safeCar(args)
+    addToEnv(sym, expr, g_env)
+    return sym
   end
   return apply(eval(op, env), evlis(args, env), env)
 end
