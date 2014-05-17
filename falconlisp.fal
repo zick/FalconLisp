@@ -1,0 +1,98 @@
+load regex
+
+kLPar = '('
+kRPar = ')'
+kQuote = "'"
+
+// Wrapper of a dictionary. This class is necessary for address comparison.
+class L(tag, dict)
+  tag_ = tag
+  dict_ = dict
+  function __getIndex(index)
+    return self.dict_[index]
+  end
+  function tag()
+    return self.tag_
+  end
+end
+
+kNil = L('nil', ['data' => 'nil'])
+
+function safeCar(obj)
+  if obj.tag() == 'cons': return obj['car']
+  return kNil
+end
+
+function safeCdr(obj)
+  if obj.tag() == 'cons': return obj['cdr']
+  return kNil
+end
+
+function makeError(str): return L('error', ['data' => str])
+
+sym_table = [ => ]
+function makeSym(str)
+  global sym_table
+  if str == 'nil': return kNil
+  if str notin sym_table: sym_table[str] = L('sym', ['data' => str])
+  return sym_table[str]
+end
+
+function makeNum(num): return L('num', ['data' => num])
+
+function makeCons(a, d): return L('cons', ['car' => a, 'cdr' => d])
+
+function makeSubr(fn): return L('fn', ['data' => fn])
+
+function makeExpr(args, env)
+  return L('expr', ['args' => safeCar(args),
+                    'body' => safeCdr(args),
+                    'env' => env])
+end
+
+function isDelimiter(c)
+  return c == kLPar or c == kRPar or c == kQuote or Regex('\s+').match(c)
+end
+
+function skipSpaces(str): return Regex('^\s+').replace(str, '')
+
+function makeNumOrSym(str)
+  if Regex('^[+-]?\d+$').match(str)
+    return makeNum(int(str))
+  end
+  return makeSym(str)
+end
+
+function readAtom(str)
+  next = ''
+  i = 0
+  while (i < len(str))
+    if isDelimiter(str[i])
+      next = str[i:]
+      str = str[:i]
+      break
+    end
+    i++
+  end
+  return [makeNumOrSym(str), next]
+end
+
+function read(str)
+  str = skipSpaces(str)
+  if str == ''
+    return [makeError('empty input'), '']
+  elif str[0] == kRPar
+    return [makeError('invalid syntax: ' + str), '']
+  elif str[0] == kLPar
+    return [makeError('noimpl'), '']
+  elif str[0] == kQuote
+    return [makeError('noimpl'), '']
+  end
+  return readAtom(str)
+end
+
+print('> ')
+while (line = stdIn().grabLine())
+  printl(read(line)[0]['data'])
+  print('> ')
+end
