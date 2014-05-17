@@ -11,6 +11,9 @@ class L(tag, dict)
   function __getIndex(index)
     return self.dict_[index]
   end
+  function __setIndex(index, value)
+    self.dict_[index] = value
+  end
   function tag()
     return self.tag_
   end
@@ -50,6 +53,17 @@ function makeExpr(args, env)
                     'env' => env])
 end
 
+function nreverse(lst)
+  ret = kNil
+  while lst.tag() == 'cons'
+    tmp = lst['cdr']
+    lst['cdr'] = ret
+    ret = lst
+    lst = tmp
+  end
+  return ret
+end
+
 function isDelimiter(c)
   return c == kLPar or c == kRPar or c == kQuote or Regex('\s+').match(c)
 end
@@ -84,15 +98,62 @@ function read(str)
   elif str[0] == kRPar
     return [makeError('invalid syntax: ' + str), '']
   elif str[0] == kLPar
-    return [makeError('noimpl'), '']
+    return readList(str[1:])
   elif str[0] == kQuote
-    return [makeError('noimpl'), '']
+    [elm, next] = read(str[1:])
+    return [makeCons(makeSym('quote'), makeCons(elm, kNil)), next]
   end
   return readAtom(str)
 end
 
+function readList(str)
+  ret = kNil
+  while true
+    str = skipSpaces(str)
+    if str == ''
+      return [makeError('unfinished parenthesis'), '']
+    elif str[0] == kRPar
+      break
+    end
+    [elm, next] = read(str)
+    if elm.tag() == 'error': return [elm, '']
+    ret = makeCons(elm, ret)
+    str = next
+  end
+  return [nreverse(ret), str[1:]]
+end
+
+function printObj(obj)
+  if obj.tag() == 'num' or obj.tag() == 'sym' or obj.tag() == 'nil'
+    return obj['data'].toString()
+  elif obj.tag() == 'error'
+    return '<error: ' + obj['data'] + '>'
+  elif obj.tag() == 'cons'
+    return printList(obj)
+  elif obj.tag() == 'subr' or obj.tag() == 'expr'
+    return '<' + obj.tag() + '>'
+  end
+  return '<unknown>'
+end
+
+function printList(obj)
+  ret = ''
+  first = true
+  while obj.tag() == 'cons'
+    if first
+      first = false
+    else
+      ret += ' '
+    end
+    ret += printObj(obj['car'])
+    obj = obj['cdr']
+  end
+  if obj.tag() == 'nil': return '(' + ret + ')'
+  return '(' + ret + ' . ' + printObj(obj) +')'
+end
+
 print('> ')
 while (line = stdIn().grabLine())
-  printl(read(line)[0]['data'])
+  printl(printObj(read(line)[0]))
   print('> ')
 end
