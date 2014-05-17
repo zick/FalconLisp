@@ -152,8 +152,39 @@ function printList(obj)
   return '(' + ret + ' . ' + printObj(obj) +')'
 end
 
+function findVar(sym, env)
+  while env.tag() == 'cons'
+    alist = env['car']
+    while alist.tag() == 'cons'
+      if alist['car']['car'] == sym: return alist['car']
+      alist = alist['cdr']
+    end
+    env = env['cdr']
+  end
+  return kNil
+end
+
+g_env = makeCons(kNil, kNil)
+
+function addToEnv(sym, val, env)
+  env['car'] = makeCons(makeCons(sym, val), env['car'])
+end
+
+function eval(obj, env)
+  if obj.tag() == 'nil' or obj.tag() == 'num' or obj.tag() == 'error'
+    return obj
+  elif obj.tag() == 'sym'
+    bind = findVar(obj, env)
+    if bind == kNil: return makeError(obj['data'] + ' has no value')
+    return bind['cdr']
+  end
+  return makeError('noimpl')
+end
+
+addToEnv(makeSym('t'), makeSym('t'), g_env)
+
 print('> ')
 while (line = stdIn().grabLine())
-  printl(printObj(read(line)[0]))
+  printl(printObj(eval(read(line)[0], g_env)))
   print('> ')
 end
