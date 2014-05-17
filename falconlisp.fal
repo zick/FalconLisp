@@ -64,6 +64,16 @@ function nreverse(lst)
   return ret
 end
 
+function pairlis(lst1, lst2)
+  ret = kNil
+  while lst1.tag() == 'cons' and lst2.tag() == 'cons'
+    ret = makeCons(makeCons(lst1['car'], lst2['car']), ret)
+    lst1 = lst1['cdr']
+    lst2 = lst2['cdr']
+  end
+  return nreverse(ret)
+end
+
 function isDelimiter(c)
   return c == kLPar or c == kRPar or c == kQuote or Regex('\s+').match(c)
 end
@@ -188,6 +198,8 @@ function eval(obj, env)
       return eval(safeCar(safeCdr(safeCdr(args))), env)
     end
     return eval(safeCar(safeCdr(args)), env)
+  elif op == makeSym('lambda')
+    return makeExpr(args, env)
   end
   return apply(eval(op, env), evlis(args, env), env)
 end
@@ -203,6 +215,15 @@ function evlis(lst, env)
   return nreverse(ret)
 end
 
+function progn(body, env)
+  ret = kNil
+  while body.tag() == 'cons'
+    ret = eval(body['car'], env)
+    body = body['cdr']
+  end
+  return ret
+end
+
 function apply(fn, args, env)
   if fn.tag() == 'error'
     return fn
@@ -210,6 +231,8 @@ function apply(fn, args, env)
     return args
   elif fn.tag() == 'subr'
     return fn['data'](args)
+  elif fn.tag() == 'expr'
+    return progn(fn['body'], makeCons(pairlis(fn['args'], args), fn['env']))
   end
   return makeError('noimpl')
 end
